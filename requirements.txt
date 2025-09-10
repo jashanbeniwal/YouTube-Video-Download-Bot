@@ -3,4 +3,4 @@ PyroFork
 flask
 pytz
 gunicorn==20.1.0
-yt-dlp==2025.8.3
+yt-dlp
