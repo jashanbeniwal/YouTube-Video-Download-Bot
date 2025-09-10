@@ -1,18 +1,36 @@
 # ©️ LISA-KOREA | @LISA_FAN_LK | NT_BOT_CHANNEL | LISA-KOREA/YouTube-Video-Download-Bot
 
-# [⚠️ Do not change this repo link ⚠️] :- https://github.com/LISA-KOREA/YouTube-Video-Download-Bot
-
 import os
 import logging
 import asyncio
 import yt_dlp
-from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrofork import Client, filters
+from pyrofork.types import InlineKeyboardMarkup, InlineKeyboardButton
 from Youtube.config import Config
 from Youtube.forcesub import handle_force_subscribe
+from time import time
 
 youtube_dl_username = None  
 youtube_dl_password = None 
+
+
+# --- Progress Bar Function ---
+async def progress_bar(current, total, message, start, status_text="Uploading..."):
+    now = time()
+    diff = now - start
+
+    if round(diff % 5.0) == 0 or current == total:
+        percent = current * 100 / total
+        speed = current / diff if diff != 0 else 0
+        eta = round((total - current) / speed) if speed != 0 else 0
+
+        progress = f"[{'#' * int(percent // 5)}{'-' * (20 - int(percent // 5))}]"
+        text = f"{status_text}\n\n{progress} {percent:.1f}%\n⏱ ETA: {eta}s"
+        try:
+            await message.edit(text)
+        except:
+            pass
+
 
 @Client.on_message(filters.regex(r'^(http(s)?:\/\/)?((w){3}.)?youtu(be|.be)?(\.com)?\/.+'))
 async def process_youtube_link(client, message):
@@ -31,7 +49,8 @@ async def process_youtube_link(client, message):
         [InlineKeyboardButton("Low Quality", callback_data=f"download|low|{youtube_link}")]
     ])
     
-    await message.reply_text("**Getting Available Formats**", reply_markup=keyboard)
+    await message.reply_text("**🎬 Choose Video Quality**", reply_markup=keyboard)
+
 
 @Client.on_callback_query(filters.regex(r'^download\|'))
 async def handle_download_button(client, callback_query):
@@ -47,13 +66,12 @@ async def handle_download_button(client, callback_query):
     }.get(quality, 'best')
 
     try:
-        await callback_query.message.edit_text("**Downloading video...**")
+        await callback_query.message.edit_text("**⬇️ Downloading video...**")
 
         ydl_opts = {
             'format': quality_format,
             'outtmpl': 'downloaded_video_%(id)s.%(ext)s',
             'merge_output_format': 'mp4',
-            'progress_hooks': [lambda d: print(f"[yt_dlp] {d.get('status')}")],
             'cookiefile': 'cookies.txt'
         }
 
@@ -69,18 +87,23 @@ async def handle_download_button(client, callback_query):
             video_id = info_dict.get('id')
             title = info_dict.get('title')
             duration = info_dict.get("duration", 0)
+            thumbnail = info_dict.get("thumbnail")
 
             if title and video_id:
                 ydl.download([youtube_link])
-                await callback_query.message.edit_text("**Uploading video...**")
+                await callback_query.message.edit_text("**📤 Uploading video...**")
 
                 video_filename = f"downloaded_video_{video_id}.mp4"
                 if os.path.exists(video_filename):
+                    c_time = time()
                     await client.send_video(
                         callback_query.message.chat.id,
                         video=open(video_filename, 'rb'),
                         caption=title,
-                        duration=duration
+                        duration=duration,
+                        thumb=thumbnail,  # ✅ Thumbnail added
+                        progress=progress_bar,
+                        progress_args=(callback_query.message, c_time, "📤 Uploading...")
                     )
                     os.remove(video_filename)
 
