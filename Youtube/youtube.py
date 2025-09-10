@@ -3,8 +3,9 @@
 
 import os
 import logging
+import asyncio
 import yt_dlp
-from pyrofork import Client, filters
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from Youtube.config import Config
 from Youtube.forcesub import handle_force_subscribe
@@ -50,7 +51,7 @@ async def process_youtube_link(client, message):
 # 📥 Handle Download Callback
 @Client.on_callback_query(filters.regex(r'^download\|'))
 async def handle_download_button(client, callback_query):
-    quality, youtube_link = callback_query.data.split('|')[1:]
+    quality, youtube_link = callback_query.data.split('|')[1:3]
 
     # 🎥 Quality mapping
     quality_format = {
@@ -106,12 +107,13 @@ async def handle_download_button(client, callback_query):
 
                     await client.send_video(
                         chat_id=callback_query.message.chat.id,
-                        video=open(video_filename, 'rb'),
+                        video=video_filename,
                         caption=f"🎬 {title}",
                         duration=duration,
                         thumb=thumbnail,
-                        progress=progress_bar,
-                        progress_args=(status_msg, "📤 Uploading")
+                        progress=lambda current, total: asyncio.get_event_loop().create_task(
+                            progress_bar(current, total, status_msg, "📤 Uploading")
+                        )
                     )
                     os.remove(video_filename)
 
