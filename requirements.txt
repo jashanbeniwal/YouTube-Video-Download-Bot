@@ -1,5 +1,5 @@
 tgcrypto
-git+https://github.com/TechXDev/pyrofork.gitt_dlp
+pyrofork
 flask
 pytz
 gunicorn==20.1.0
